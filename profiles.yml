@@ -1,0 +1,13 @@
+default:
+  target: dev
+  outputs:
+    dev:
+      type: snowflake
+      account: HXB80588
+      user: USER_FUSION_PRIVATE_PREVIEW
+      password: ami-forsaken-priced0slick
+      role: TRANSFORMER
+      database: DB_FUSION_PREVIEW
+      warehouse: WH_FUSION_PREVIEW
+      schema: anders
+      threads: 4

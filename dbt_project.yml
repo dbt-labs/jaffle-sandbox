@@ -14,11 +14,23 @@ macro-paths: ["macros"]
 target-path: "target"
 clean-targets:
     - "target"
-    - "dbt_modules"
+    - "dbt_packages"
     - "logs"
+
+vars:
+  customer_id: 3
 
 models:
   jaffle_shop:
     +materialized: table
     staging:
       +materialized: view
+
+# seeds:
+#   raw_orders:
+#     +config:
+#       column_types:
+#         id: integer
+#         user_id: integer
+#         order_date: date
+#         status: string

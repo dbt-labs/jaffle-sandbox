@@ -1,0 +1,17 @@
+version: 2
+
+snapshots:
+  - name: fake_data_ltz_snapshot
+    description: "Snapshot of fake_data_ltz seed data to track changes over time"
+    config:
+      target_schema: snapshots
+      unique_key: id
+      strategy: timestamp
+      updated_at: loaded_at
+    columns:
+      - name: id
+        description: "Unique identifier"
+      - name: name
+        description: "Person name"
+      - name: loaded_at
+        description: "Timestamp when the record was loaded" 
