@@ -26,7 +26,11 @@ models:
     staging:
       +materialized: view
 
-# seeds:
+seeds:
+  jaffle_shop:
+    fake_data_utc:
+      +column_types:
+        loaded_at: TIMESTAMP_NTZ
 #   raw_orders:
 #     +config:
 #       column_types:
