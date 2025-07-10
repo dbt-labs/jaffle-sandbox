@@ -1,0 +1,13 @@
+sources:
+  - name: temp
+    database: analytics_dev
+    schema: dbt_dataders
+    config:
+      loaded_at_field: loaded_at
+    tables:
+      - name: temp
+        columns:
+          - name: my_col
+      - name: temp_table
+        columns:
+          - name: loaded_at
