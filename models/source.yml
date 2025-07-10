@@ -1,11 +1,12 @@
 sources:
   - name: temp
-    database: development
-    schema: fusion_tests_schema
+    database: analytics_dev
+    schema: dbt_dataders
     config:
       freshness:
         warn_after:
           count: 24
           period: hour
     tables:
-      - name: m1
+      - name: temp_view
+      - name: temp_table
