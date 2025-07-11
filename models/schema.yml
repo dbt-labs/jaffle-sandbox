@@ -31,7 +31,13 @@ models:
 
   - name: orders
     description: This table has basic information about orders, as well as some derived facts based on payments
-
+    tests:
+      - dbt_utils.unique_combination_of_columns:
+          combination_of_columns:
+            - order_id
+            - customer_id
+          config:
+            severity: warn
     columns:
       - name: order_id
         tests:
