@@ -22,3 +22,8 @@ models:
     +materialized: table
     staging:
       +materialized: view
+
+sources:
+  jaffle_shop:
+    source_disabled:
+      +enabled: false
