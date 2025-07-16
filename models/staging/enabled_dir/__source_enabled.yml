@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: source_enabled
+    schema: dbt_dataders
+    tables:
+      - name: source_enabled_table_enabled

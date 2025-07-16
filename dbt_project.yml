@@ -19,11 +19,22 @@ clean-targets:
 
 models:
   jaffle_shop:
-    +materialized: table
     staging:
-      +materialized: view
+      +materialized: table
+      disabled_dir:
+        +enabled: false
+      enabled_dir:
+        +enabled: true
+
+
 
 sources:
   jaffle_shop:
-    source_disabled:
-      +enabled: false
+    +enabled: false
+    staging:
+      enabled_dir:
+        +enabled: true
+      disabled_dir:
+        +enabled: false
+
+

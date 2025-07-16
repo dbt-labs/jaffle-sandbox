@@ -1,0 +1,7 @@
+version: 2
+
+sources:
+  - name: source_disabled
+    schema: dbt_dataders
+    tables:
+      - name: table_disabled
