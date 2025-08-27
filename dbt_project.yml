@@ -10,15 +10,15 @@ seed-paths: ["seeds"]
 test-paths: ["tests"]
 analysis-paths: ["analysis"]
 macro-paths: ["macros"]
-
-target-path: "target"
 clean-targets:
-    - "target"
-    - "dbt_modules"
-    - "logs"
+  - "target"
+  - "dbt_modules"
+  - "logs"
 
 models:
   jaffle_shop:
     +materialized: table
     staging:
       +materialized: view
+flags:
+  require_generic_test_arguments_property: true
