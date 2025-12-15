@@ -1,3 +1,12 @@
+
+{{
+    config(
+        materialized = 'table',
+        catalog_name = 'fusion_dev'
+
+    )
+}}
+
 with customers as (
 
     select * from {{ ref('stg_customers') }}

@@ -1,0 +1,12 @@
+
+catalogs:
+  - name: fusion_dev # Core: arbitrary name
+    active_write_integration: fusion_dev
+    write_integrations:
+      - name: fusion_dev # Core: the catalog name
+        table_format: iceberg
+        catalog_type: unity
+        file_format: delta
+
+
+        
