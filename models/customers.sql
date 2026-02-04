@@ -1,6 +1,9 @@
 {{ config(
-    materialized='table',
-    snowflake_warehouse=var('snowflake_warehouse')
+    materialized='incremental',
+    unique_key="customer_id",
+    on_schema_change="sync_all_columns",
+    post_hook="{{ anonymise_user_PII(this) }}",
+    snowflake_warehouse=var('warehouse_small_models')
 ) }}
 
 with customers as (
@@ -53,13 +56,14 @@ customer_payments as (
 final as (
 
     select
-        customers.customer_id,
+        cast(customers.customer_id as varchar) as customer_id,
         customers.first_name,
         customers.last_name,
         customer_orders.first_order,
         customer_orders.most_recent_order,
         customer_orders.number_of_orders,
-        customer_payments.total_amount as customer_lifetime_value
+        customer_payments.total_amount as customer_lifetime_value,
+        current_timestamp() as anonymised_at
 
     from customers
 

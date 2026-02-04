@@ -24,5 +24,7 @@ flags:
   require_generic_test_arguments_property: true
 
 vars:
-  snowflake_warehouse: |
-    {%- if  target.name == 'default' -%} {{ target.warehouse }} {%- else -%} 'DBT_TESTING' {%- endif -%}"
+  warehouse_small_models: |
+    {%- if  target.name == 'local' -%} {{ target.warehouse }}
+    {%- else -%} "DBT_TESTING"
+    {%- endif -%}
