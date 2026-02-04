@@ -1,3 +1,8 @@
+{{ config(
+    materialized='table',
+    snowflake_warehouse=var('snowflake_warehouse')
+) }}
+
 with customers as (
 
     select * from {{ ref('stg_customers') }}
