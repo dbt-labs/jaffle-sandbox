@@ -16,9 +16,11 @@ clean-targets:
   - "logs"
 
 models:
+  +static_analysis: off
   jaffle_shop:
     +materialized: table
     staging:
-      +materialized: view
+      +materialized: table
 flags:
   require_generic_test_arguments_property: true
+  use_catalogs_v2: true

@@ -1,0 +1,44 @@
+default:
+  target: ducklake_no_path
+  outputs:
+    # Test 1: attach-only with ducklake: scheme, no top-level path (panic fix test)
+    ducklake_no_path:
+      type: duckdb
+      schema: main
+      attach:
+        - path: "ducklake:jaffle_ducklake.ducklake"
+          alias: jaffle_ducklake
+
+    # Test 2: attach-only with is_ducklake: true flag, no top-level path
+    ducklake_md_no_path:
+      type: duckdb
+      schema: main
+      attach:
+        - path: "md:jaffle_ducklake"
+          alias: jaffle_ducklake
+          is_ducklake: true
+      extensions:
+        - httpfs
+
+    # Iceberg REST catalog via Lakekeeper (local docker-compose)
+    iceberg_rest:
+      type: duckdb
+      path: ":memory:"
+      database: demo
+      schema: main
+      extensions:
+        - iceberg
+        - httpfs
+      secrets:
+        - type: s3
+          name: minio_secret
+          key_id: minio-root-user
+          secret: minio-root-password
+          endpoint: "localhost:9000"
+          url_style: path
+          use_ssl: false
+
+    # Original local DuckDB for baseline
+    local:
+      type: duckdb
+      path: "thing.duckdb"

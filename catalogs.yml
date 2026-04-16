@@ -1,0 +1,9 @@
+catalogs:
+  - name: demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "http://localhost:8181/catalog"
+        authorization_type: "NONE"
+        access_delegation_mode: "NONE"
