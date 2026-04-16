@@ -52,12 +52,40 @@ DuckDB's Iceberg extension expects the **warehouse name** as the first arg and `
 - Added `warehouse` config key support (falls back to catalog name)
 - Source arg now uses warehouse name instead of endpoint URL
 
-### DuckDB Iceberg Extension Limitations Hit
-1. **`CREATE VIEW` not supported** — Iceberg tables only, no views. Fixed by setting `+materialized: table` for staging models.
-2. **`DROP TABLE ... CASCADE` not supported** — The table materialization uses CASCADE which Iceberg rejects.
-3. **Orphaned `__dbt_tmp` tables** — The table materialization creates `{model}__dbt_tmp` via CTAS, but on failure the tmp table persists in the Iceberg catalog. Subsequent runs fail because `DROP TABLE IF EXISTS` (with CASCADE) can't clean them up. Requires nuking the Lakekeeper stack (`docker-compose down`) to reset.
+### Iceberg Catalog Constraints (expected, not bugs)
+1. **No views** — Iceberg only supports tables. Fixed by `+materialized: table` for staging.
+2. **`DROP TABLE ... CASCADE` not supported** — DuckDB Iceberg rejects CASCADE. The table materialization macro uses CASCADE for cleanup.
+
+### Blocking Bug: CTAS "already exists" (Fusion-specific)
+
+`dbt run` fails on every model with:
+```
+Invalid Configuration Error: Table stg_customers__dbt_tmp already exists
+```
+
+**Not a DuckDB Iceberg extension bug.** Verified by replicating the exact Fusion query sequence in DuckDB CLI — CTAS works perfectly:
+1. Same DuckDB v1.4.4, same iceberg extension (1095c1fa)
+2. Same `CREATE SCHEMA IF NOT EXISTS`, same `information_schema.tables` query, same CTAS
+3. Works in single-process and cross-process (dbt seed via Fusion, CTAS via DuckDB CLI)
+
+**Root cause is in Fusion's ADBC execution layer.** Debug log shows only one CTAS statement, but DuckDB returns "already exists." The table IS registered in the Iceberg catalog (verified via Lakekeeper API). Hypothesis: ADBC prepared statement execution may create the table during `prepare()` then fail on `execute()`, or there's an internal retry that double-creates.
+
+**Fusion debug log query sequence** (`dbt --log-level debug run`):
+```
+1. SELECT schema_name FROM system.information_schema.schemata WHERE lower(catalog_name) = '"demo"'
+   -- NOTE: double quotes inside single quotes — likely returns wrong results
+2. SELECT type FROM duckdb_databases() WHERE lower(database_name)='demo' AND type='sqlite'
+3. CREATE SCHEMA IF NOT EXISTS "demo"."main"
+4. SELECT table_catalog, ... FROM information_schema.tables WHERE table_schema = 'main'
+5. CREATE TABLE "demo"."main"."stg_customers__dbt_tmp" AS (SELECT ... FROM "demo"."main"."raw_customers")
+   -- FAILS: "Table stg_customers__dbt_tmp already exists"
+```
+
+### Also Noted
+- Step 1 above has `'"demo"'` (double-quoted inside single quotes) in the WHERE clause — this is probably a quoting bug that causes the schema check to miss the `demo` catalog, but doesn't directly cause the CTAS failure.
 
 ### Open Questions
-- Why does the CTAS for `__dbt_tmp` tables fail/repeat even on a fresh catalog with a single model? The compiled SQL looks correct. Needs deeper investigation into the Fusion adapter's task execution for Iceberg catalogs.
-- Should the DuckDB table materialization be adapted for Iceberg (skip CASCADE, use `CREATE OR REPLACE TABLE` if supported)?
-- Does the `catalogs.yml` need a `warehouse` config key for cases where the warehouse name differs from the catalog name?
+- What does Fusion's ADBC `execute_update()` do internally for CTAS against Iceberg? Is there a prepare/execute split that double-creates?
+- Should the DuckDB table materialization use `CREATE OR REPLACE TABLE` or `CREATE TABLE IF NOT EXISTS` for Iceberg catalogs?
+- Does `catalogs.yml` need a `warehouse` config key for cases where the warehouse name differs from the catalog name?
+- The schema check quoting bug (`'"demo"'` vs `'demo'`) should be investigated separately.
