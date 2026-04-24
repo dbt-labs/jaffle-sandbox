@@ -1,2 +1,0 @@
-demo_order,catalog_name,storage_type
-4,iceberg_rest,lakekeeper + minio
