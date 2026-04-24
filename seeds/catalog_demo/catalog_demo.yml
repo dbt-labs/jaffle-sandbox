@@ -1,0 +1,9 @@
+version: 2
+
+seeds:
+  - name: iceberg_rest_catalog_demo
+    config:
+      database: iceberg_demo
+      schema: main
+      tags:
+        - catalog_demo

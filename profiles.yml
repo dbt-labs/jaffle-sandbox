@@ -42,3 +42,21 @@ default:
     local:
       type: duckdb
       path: "thing.duckdb"
+
+    # Four-catalog demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake + local Iceberg REST
+    catalog_showcase:
+      type: duckdb
+      path: "catalog_showcase.duckdb"
+      schema: main
+      extensions:
+        - httpfs
+        - iceberg
+        - motherduck
+      secrets:
+        - type: s3
+          name: minio_secret
+          key_id: minio-root-user
+          secret: minio-root-password
+          endpoint: "localhost:9000"
+          url_style: path
+          use_ssl: false

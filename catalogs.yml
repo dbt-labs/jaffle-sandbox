@@ -1,9 +1,29 @@
 catalogs:
-  - name: demo
+  - name: jaffle_ducklake
+    type: ducklake
+    table_format: default
+    config:
+      duckdb:
+        metadata_path: "jaffle_ducklake.ducklake"
+        attach_as: "jaffle_ducklake"
+        create_if_not_exists: true
+
+  - name: jaffle_ducklake_remote_demo
+    type: ducklake
+    table_format: default
+    config:
+      duckdb:
+        metadata_path: "md:jaffle_ducklake_remote_demo"
+        data_path: "ducklake_remote_data/"
+        create_if_not_exists: true
+
+  - name: iceberg_demo
     type: iceberg_rest
     table_format: iceberg
     config:
       duckdb:
         endpoint: "http://localhost:8181/catalog"
+        warehouse: "demo"
         authorization_type: "NONE"
         access_delegation_mode: "NONE"
+        attach_as: "iceberg_demo"
