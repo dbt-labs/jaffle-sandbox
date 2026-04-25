@@ -23,12 +23,12 @@ default:
     # Iceberg REST catalog via Lakekeeper (local docker-compose)
     iceberg_rest:
       type: duckdb
-      path: ":memory:"
+      path: "demo.duckdb"
       database: demo
-      schema: main
+      schema: default
       extensions:
-        - iceberg
         - httpfs
+        - iceberg
       secrets:
         - type: s3
           name: minio_secret

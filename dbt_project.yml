@@ -19,6 +19,9 @@ models:
   +static_analysis: off
   jaffle_shop:
     +materialized: table
+    catalog_demo:
+      iceberg_rest_catalog_demo:
+        +catalog: iceberg_demo
     staging:
       +materialized: table
 flags:
