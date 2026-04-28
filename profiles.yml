@@ -1,25 +1,6 @@
 default:
-  target: ducklake_no_path
+  target: catalog_showcase
   outputs:
-    # Test 1: attach-only with ducklake: scheme, no top-level path (panic fix test)
-    ducklake_no_path:
-      type: duckdb
-      schema: main
-      attach:
-        - path: "ducklake:jaffle_ducklake.ducklake"
-          alias: jaffle_ducklake
-
-    # Test 2: attach-only with is_ducklake: true flag, no top-level path
-    ducklake_md_no_path:
-      type: duckdb
-      schema: main
-      attach:
-        - path: "md:jaffle_ducklake?motherduck_token={{ env_var('MOTHERDUCK_TOKEN') }}"
-          alias: jaffle_ducklake
-          is_ducklake: true
-      extensions:
-        - httpfs
-
     # Iceberg REST catalog via Lakekeeper (local docker-compose)
     iceberg_rest:
       type: duckdb

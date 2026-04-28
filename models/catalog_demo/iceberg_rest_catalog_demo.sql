@@ -1,6 +1,6 @@
 {{ config(
     materialized='table',
-    database='iceberg_demo',
+    catalog_name='iceberg_demo',
     tags=['catalog_demo']
 ) }}
 

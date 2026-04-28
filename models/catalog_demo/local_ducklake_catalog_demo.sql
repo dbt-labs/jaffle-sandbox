@@ -1,6 +1,6 @@
 {{ config(
     materialized='table',
-    database='jaffle_ducklake',
+    catalog_name='jaffle_ducklake',
     tags=['catalog_demo']
 ) }}
 
