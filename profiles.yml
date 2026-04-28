@@ -14,7 +14,7 @@ default:
       type: duckdb
       schema: main
       attach:
-        - path: "md:jaffle_ducklake"
+        - path: "md:jaffle_ducklake?motherduck_token={{ env_var('MOTHERDUCK_TOKEN') }}"
           alias: jaffle_ducklake
           is_ducklake: true
       extensions:
@@ -43,7 +43,7 @@ default:
       type: duckdb
       path: "thing.duckdb"
 
-    # Four-catalog demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake + local Iceberg REST
+    # Five-catalog demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake + local Iceberg REST + local filesystem
     catalog_showcase:
       type: duckdb
       path: "catalog_showcase.duckdb"

@@ -9,3 +9,8 @@ logs/
 venv/
 env/
 .venv/
+*.duckdb
+*.duckdb.wal
+*.ducklake
+*.ducklake.files/
+local_files/*.parquet

@@ -81,3 +81,12 @@ models:
         description: Amount of the order (AUD) paid for by gift card
         tests:
           - not_null
+
+sources:
+  - name: local_files
+    config:
+      catalog_name: local_files
+      external_location: "{name}.csv"
+    tables:
+      - name: raw_orders
+        description: Raw orders read directly from the local filesystem catalog
