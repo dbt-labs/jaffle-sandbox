@@ -19,6 +19,12 @@ models:
   +static_analysis: off
   jaffle_shop:
     +materialized: table
+    orders:
+      +catalog_name: jaffle_ducklake
+      +tags: [catalog_demo]
+    customers:
+      +catalog_name: jaffle_ducklake_remote_demo
+      +tags: [catalog_demo]
     staging:
       +materialized: table
 flags:
