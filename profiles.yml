@@ -1,43 +1,17 @@
 default:
   target: catalog_showcase
   outputs:
-    # Iceberg REST catalog via Lakekeeper (local docker-compose)
-    iceberg_rest:
-      type: duckdb
-      path: "demo.duckdb"
-      database: demo
-      schema: default
-      extensions:
-        - httpfs
-        - iceberg
-      secrets:
-        - type: s3
-          name: minio_secret
-          key_id: minio-root-user
-          secret: minio-root-password
-          endpoint: "localhost:9000"
-          url_style: path
-          use_ssl: false
-
-    # Original local DuckDB for baseline
-    local:
-      type: duckdb
-      path: "thing.duckdb"
-
-    # Five-catalog demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake + local Iceberg REST + local filesystem
+    # Attach-profile demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake
     catalog_showcase:
       type: duckdb
       path: "catalog_showcase.duckdb"
       schema: main
+      attach:
+        - path: "ducklake:jaffle_ducklake.ducklake"
+          alias: jaffle_ducklake
+        - path: "md:jaffle_ducklake_remote_demo?motherduck_token={{ env_var('MOTHERDUCK_TOKEN') }}"
+          alias: jaffle_ducklake_remote_demo
+          is_ducklake: true
       extensions:
         - httpfs
-        - iceberg
         - motherduck
-      secrets:
-        - type: s3
-          name: minio_secret
-          key_id: minio-root-user
-          secret: minio-root-password
-          endpoint: "localhost:9000"
-          url_style: path
-          use_ssl: false
