@@ -22,6 +22,12 @@ models:
     catalog_demo:
       iceberg_rest_catalog_demo:
         +catalog: iceberg_demo
+      local_ducklake_catalog_demo:
+        +enabled: false
+      remote_ducklake_catalog_demo:
+        +enabled: false
+      local_filesystem_catalog_demo:
+        +enabled: false
     staging:
       +materialized: table
 flags:
