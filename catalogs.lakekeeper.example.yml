@@ -1,0 +1,19 @@
+catalogs:
+  - name: iceberg_demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "http://localhost:8181/catalog"
+        warehouse: "demo"
+        authorization_type: "NONE"
+        access_delegation_mode: "NONE"
+        attach_as: "iceberg_demo"
+
+  - name: local_files
+    type: local_filesystem
+    table_format: default
+    config:
+      duckdb:
+        root_path: "local_files"
+        file_format: csv

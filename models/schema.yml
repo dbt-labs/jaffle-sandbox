@@ -87,3 +87,5 @@ sources:
     tables:
       - name: raw_orders
         description: Raw orders read directly from the local filesystem catalog
+        config:
+          external_location: "local_files/raw_orders.csv"

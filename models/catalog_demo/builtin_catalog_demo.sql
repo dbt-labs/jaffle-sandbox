@@ -1,6 +1,6 @@
 {{ config(
     materialized='table',
-    tags=['catalog_demo']
+    tags=['catalog_demo', 'capability_probe', 'catalog_builtin', 'catalog_writable_expected']
 ) }}
 
 select

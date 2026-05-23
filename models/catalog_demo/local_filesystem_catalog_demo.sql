@@ -1,7 +1,7 @@
 {{ config(
     materialized='external',
     catalog_name='local_files',
-    tags=['catalog_demo']
+    tags=['catalog_demo', 'capability_probe', 'catalog_local_filesystem', 'catalog_external_write_if_available']
 ) }}
 
 select

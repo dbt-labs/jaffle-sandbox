@@ -21,13 +21,15 @@ models:
     +materialized: table
     catalog_demo:
       iceberg_rest_catalog_demo:
-        +catalog: iceberg_demo
+        +enabled: "{{ target.name == 'iceberg_rest' }}"
       local_ducklake_catalog_demo:
-        +enabled: false
+        +enabled: "{{ target.name == 'ducklake_no_path' }}"
+      polaris_metadata_catalog_demo:
+        +enabled: "{{ target.name == 'polaris_iceberg_rest' }}"
       remote_ducklake_catalog_demo:
-        +enabled: false
+        +enabled: "{{ target.name == 'ducklake_md_no_path' }}"
       local_filesystem_catalog_demo:
-        +enabled: false
+        +enabled: "{{ target.name == 'catalog_showcase' }}"
     staging:
       +materialized: table
 flags:

@@ -1,6 +1,15 @@
 default:
   target: ducklake_no_path
   outputs:
+    # ClickHouse target for static analysis testing (no live connection needed)
+    clickhouse_local:
+      type: clickhouse
+      host: localhost
+      port: 8123
+      user: default
+      password: ""
+      schema: jaffle_shop
+      database: jaffle_shop
     # Test 1: attach-only with ducklake: scheme, no top-level path (panic fix test)
     ducklake_no_path:
       type: duckdb
@@ -14,8 +23,8 @@ default:
       type: duckdb
       schema: main
       attach:
-        - path: "md:jaffle_ducklake?motherduck_token={{ env_var('MOTHERDUCK_TOKEN') }}"
-          alias: jaffle_ducklake
+        - path: "md:jaffle_ducklake_remote_demo"
+          alias: jaffle_ducklake_remote_demo
           is_ducklake: true
       extensions:
         - httpfs
@@ -38,12 +47,30 @@ default:
           url_style: path
           use_ssl: false
 
+    # Polaris Iceberg REST catalog. Keep credentials in environment variables.
+    # Use catalogs.polaris.example.yml as catalogs.yml when testing this target.
+    polaris_iceberg_rest:
+      type: duckdb
+      path: "polaris.duckdb"
+      database: demo
+      schema: default
+      extensions:
+        - httpfs
+        - iceberg
+      secrets:
+        - type: iceberg
+          name: polaris_oauth
+          client_id: "{{ env_var('POLARIS_CLIENT_ID') }}"
+          client_secret: "{{ env_var('POLARIS_CLIENT_SECRET') }}"
+          oauth2_server_uri: "{{ env_var('POLARIS_OAUTH2_SERVER_URI') }}"
+
     # Original local DuckDB for baseline
     local:
       type: duckdb
       path: "thing.duckdb"
 
-    # Five-catalog demo target: built-in DuckDB + local DuckLake + MotherDuck DuckLake + local Iceberg REST + local filesystem
+    # Multi-catalog demo target: built-in DuckDB + local filesystem.
+    # Copy catalogs.lakekeeper.example.yml to catalogs.yml when testing Iceberg REST.
     catalog_showcase:
       type: duckdb
       path: "catalog_showcase.duckdb"
