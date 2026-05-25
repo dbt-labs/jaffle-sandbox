@@ -11,6 +11,19 @@ catalogs:
         access_delegation_mode: "VENDED_CREDENTIALS"
         default_region: "us-west-2"
         attach_as: "polaris_demo"
+        default_schema: "sql_server_covid19"
+
+  - name: iceberg_demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "http://localhost:8181/catalog"
+        warehouse: "demo"
+        authorization_type: "NONE"
+        access_delegation_mode: "NONE"
+        attach_as: "iceberg_demo"
+        default_schema: "default"
 
   - name: local_files
     type: local_filesystem

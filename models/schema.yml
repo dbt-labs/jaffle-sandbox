@@ -82,6 +82,16 @@ models:
         tests:
           - not_null
 
+  - name: polaris_to_horizon_write_repro
+    description: Polaris source row count written into Horizon through DuckDB Iceberg REST.
+    columns:
+      - name: source_catalog
+        data_type: varchar
+      - name: sink_catalog
+        data_type: varchar
+      - name: source_rows
+        data_type: integer
+
 sources:
   - name: local_files
     tables:
@@ -89,3 +99,16 @@ sources:
         description: Raw orders read directly from the local filesystem catalog
         config:
           external_location: "local_files/raw_orders.csv"
+
+  - name: polaris_covid
+    catalog: polaris_demo
+    tables:
+      - name: us_states
+        description: Polaris Iceberg REST source routed through top-level source catalog
+
+  - name: horizon_demo
+    catalog: horizon_demo
+    schema: ICEBERGRESTPARTITIONBY
+    tables:
+      - name: MANAGED_TABLE
+        description: Snowflake-managed Iceberg table visible through the Horizon REST catalog

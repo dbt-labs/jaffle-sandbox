@@ -1,0 +1,52 @@
+catalogs:
+  - name: polaris_demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "{{ env_var('POLARIS_URI', '') or env_var('POLARIS_URL') }}"
+        warehouse: "{{ env_var('POLARIS_WAREHOUSE') }}"
+        secret: polaris_oauth
+        authorization_type: "OAUTH2"
+        access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "us-west-2"
+        attach_as: "polaris_demo"
+        default_schema: "sql_server_covid19"
+
+  - name: iceberg_demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "http://localhost:8181/catalog"
+        warehouse: "demo"
+        authorization_type: "NONE"
+        access_delegation_mode: "NONE"
+        attach_as: "iceberg_demo"
+        default_schema: "default"
+
+  - name: horizon_demo
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "{{ env_var('HORIZON_ENDPOINT') }}"
+        warehouse: "{{ env_var('HORIZON_WAREHOUSE') }}"
+        secret: horizon_oauth
+        authorization_type: "OAUTH2"
+        access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "{{ env_var('HORIZON_REGION', 'us-west-2') }}"
+        attach_as: "horizon_demo"
+        default_schema: "{{ env_var('HORIZON_DEFAULT_SCHEMA', 'DEMO') }}"
+        support_stage_create: false
+        use_transaction_commit: false
+        skip_create_table_metadata_updates: true
+        allow_deletes: false
+
+  - name: local_files
+    type: local_filesystem
+    table_format: default
+    config:
+      duckdb:
+        root_path: "local_files"
+        file_format: csv

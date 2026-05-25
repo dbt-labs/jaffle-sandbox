@@ -30,6 +30,8 @@ models:
         +enabled: "{{ target.name == 'ducklake_md_no_path' }}"
       local_filesystem_catalog_demo:
         +enabled: "{{ target.name == 'catalog_showcase' }}"
+      conference_catalog_demo:
+        +enabled: "{{ target.name in ['conference_catalog_demo', 'conference_catalog_demo_horizon'] }}"
     staging:
       +materialized: table
 flags:
