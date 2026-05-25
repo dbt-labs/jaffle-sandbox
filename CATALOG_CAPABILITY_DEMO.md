@@ -11,7 +11,7 @@ local DuckDB, DuckLake, or local filesystem probes.
 ## Debug Binary
 
 ```bash
-DBT=/Users/dataders/Developer/fs.codex-duckdb-horizon-catalog/target/debug/dbt
+DBT=/Users/dataders/Developer/fs/target/debug/dbt
 ```
 
 ## Catalog Files
@@ -97,22 +97,35 @@ The Horizon-enabled demo now runs both models in one command: Polaris reads and
 Horizon reads are both materialized into Lakekeeper Iceberg tables through the
 vanilla Fusion DuckDB adapter.
 
-Full attachment smoke test:
+Full attachment + cross-catalog smoke test:
 
 ```bash
 cp catalogs.conference.full.example.yml catalogs.yml
+uv run --no-project --with pyyaml --with pyjwt --with cryptography \
+  scripts/horizon_keypair_env.py --profile fusion_tests --target snowflake \
+  > /tmp/horizon_env.sh
+source /tmp/horizon_env.sh
 export DATABRICKS_UC_ENDPOINT="https://<workspace>/api/2.1/unity-catalog/iceberg-rest"
 export DATABRICKS_UC_CATALOG="<unity_catalog_name>"
 export DATABRICKS_UC_SCHEMA="<schema_name>"
 export DATABRICKS_TOKEN="<databricks_pat>"
 $DBT show --profiles-dir . --target conference_catalog_demo_full --inline 'select database_name, type from duckdb_databases() order by 1' --output json --no-partial-parse
+ENABLE_HORIZON_READ_MODEL=true $DBT run --profiles-dir . --target conference_catalog_demo_full --select tag:conference_catalog_demo --no-partial-parse
+ENABLE_HORIZON_READ_MODEL=true $DBT show --profiles-dir . --target conference_catalog_demo_full --inline "select 'polaris_to_lakekeeper' as model, * from iceberg_demo.default.polaris_to_lakekeeper union all select 'horizon_read_probe' as model, * from iceberg_demo.default.horizon_read_probe order by model" --output json --no-partial-parse
 ```
 
 This target is for showing the abstraction boundary: one `catalogs.yml` can
-attach Polaris, Lakekeeper, Horizon, Unity Catalog, and local files. The Unity
-Catalog row is an attachment/config proof path only until the DuckDB-Iceberg
-manifest schema-header fix is available in the runtime extension used for the
-demo.
+attach Polaris, Lakekeeper, Horizon, Unity Catalog, and local files. The full
+target also runs the Polaris and Horizon source models into Lakekeeper, so the
+same dbt DAG shows different source catalogs and one Iceberg sink catalog in a
+single vanilla Fusion DuckDB invocation.
+
+Unity Catalog is currently an attachment/config proof path. Known managed
+Iceberg tables tested with the available Databricks PAT returned `403 User not
+authorized to load table` through the Iceberg REST `GetTableInformation`
+endpoint. UC write proof still depends on the DuckDB-Iceberg manifest
+schema-header fix and a credential authorized for the UC Iceberg REST external
+access path.
 
 MotherDuck DuckLake demo:
 
@@ -128,7 +141,8 @@ until MotherDuck publishes a compatible extension.
 
 ## Verified Local Probes
 
-These passed with the debug binary on May 25, 2026 (`709b460e72`):
+These passed with the debug binary on May 25, 2026. The newest full-catalog
+proof used fs `8529692b39` and this demo branch at `0929ec5`:
 
 ```bash
 $DBT run --profiles-dir . --target local --select tag:catalog_builtin --no-partial-parse
@@ -152,8 +166,10 @@ Expected results:
 | Polaris to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` | `conference_catalog_demo` | Verified source read from `polaris_demo.sql_server_covid19.us_states`, table write to `iceberg_demo.default.polaris_to_lakekeeper`, and readback `source_rows = 56`. |
 | Polaris + Lakekeeper + Horizon attachments | inline `duckdb_databases()` | `conference_catalog_demo_horizon` | Verified three Iceberg catalogs attached together: `polaris_demo`, `iceberg_demo`, and `horizon_demo`, using the local DuckDB 1.5.3 Iceberg extension cache. |
 | Snowflake Horizon to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true` | `conference_catalog_demo_horizon` | Verified read of Snowflake-managed Iceberg table `horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE` via Horizon, table write to `iceberg_demo.default.horizon_read_probe`, and readback `source_rows = 18`. |
+| Full Polaris + Lakekeeper + Horizon + Unity attachment | inline `duckdb_databases()` | `conference_catalog_demo_full` | Verified `polaris_demo`, `iceberg_demo`, `horizon_demo`, and `unity_demo` attached as Iceberg catalogs in one DuckDB session. |
+| Full target cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true` | `conference_catalog_demo_full` | Verified `polaris_to_lakekeeper` and `horizon_read_probe` both materialized into Lakekeeper through the vanilla Fusion DuckDB adapter, then read back `source_rows = 56` and `source_rows = 18`. |
 | Polaris via PyIceberg | direct PyIceberg probe | n/a | PyIceberg can authenticate, list namespaces, and read tables such as `sql_server_covid19.us_states`, `sql_server_covid19.us`, and `sql_server_dbo.district`. It rejects some `aaron_fb_ads` tables because their metadata contains a custom statistics blob type `fivetran-synced-distribution`, while DuckDB reads those tables successfully. |
-| Unity Catalog Iceberg REST attachment | inline `duckdb_databases()` | `conference_catalog_demo_full` | Optional full-attachment path using `catalogs.conference.full.example.yml` plus Databricks UC env vars. This exercises dbt/Fusion catalog config and DuckDB ATTACH generation; end-to-end UC managed reads/writes still depend on DuckDB-Iceberg runtime fixes and credentials. |
+| Unity Catalog Iceberg REST attachment | inline `duckdb_databases()` | `conference_catalog_demo_full` | Verified attachment/config path using `catalogs.conference.full.example.yml` plus Databricks UC env vars. Direct table reads with the available PAT currently return `403 User not authorized to load table`; end-to-end UC writes still depend on DuckDB-Iceberg runtime fixes and credentials. |
 | Snowflake Horizon write | optional / disabled by default | `conference_catalog_demo_horizon` | Existing-table insert is proven through Horizon; new-table materialization still fails with Horizon REST `403 Authorization failed` for the current `TESTER` role/PAT. The write repro model stays opt-in with `ENABLE_HORIZON_WRITE_MODEL=true` until a create-authorized Horizon PAT/role is available. |
 
 ## Cheap Checks
@@ -165,6 +181,7 @@ $DBT ls --profiles-dir . --target ducklake_no_path --select tag:catalog_local_du
 MOTHERDUCK_TOKEN=... $DBT ls --profiles-dir . --target ducklake_md_no_path --select tag:catalog_remote_ducklake --no-partial-parse
 $DBT ls --profiles-dir . --target polaris_iceberg_rest --select tag:catalog_polaris_metadata --no-partial-parse
 $DBT show --profiles-dir . --target conference_catalog_demo_full --inline 'select database_name, type from duckdb_databases() order by 1' --output json --no-partial-parse
+ENABLE_HORIZON_READ_MODEL=true $DBT ls --profiles-dir . --target conference_catalog_demo_full --select tag:conference_catalog_demo --no-partial-parse
 ```
 
 `ducklake_md_no_path` attaches `md:jaffle_ducklake_remote_demo`; the MotherDuck
