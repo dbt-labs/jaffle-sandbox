@@ -2,7 +2,7 @@
     enabled=env_var('ENABLE_HORIZON_WRITE_MODEL', 'false') | as_bool,
     materialized='table',
     catalog_name='horizon_demo',
-    schema=env_var('HORIZON_DEFAULT_SCHEMA', 'DEMO'),
+    schema=env_var('HORIZON_WRITE_SCHEMA', 'ICEBERGRESTPARTITIONBY'),
     contract={'enforced': true},
     tags=['conference_catalog_demo', 'catalog_polaris_source', 'catalog_horizon_write_repro']
 ) }}

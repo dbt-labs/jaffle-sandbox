@@ -92,6 +92,16 @@ models:
       - name: source_rows
         data_type: integer
 
+  - name: unity_write_proof
+    description: Minimal table materialized into Databricks Unity Catalog through DuckDB Iceberg REST.
+    columns:
+      - name: sink_catalog
+        data_type: varchar
+      - name: writer
+        data_type: varchar
+      - name: proof_rows
+        data_type: integer
+
 sources:
   - name: local_files
     tables:

@@ -49,6 +49,7 @@ catalogs:
         secret: databricks_pat
         authorization_type: "OAUTH2"
         access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "{{ env_var('DATABRICKS_UC_REGION', 'us-west-2') }}"
         attach_as: "unity_demo"
         default_schema: "{{ env_var('DATABRICKS_UC_SCHEMA', 'default') }}"
 
