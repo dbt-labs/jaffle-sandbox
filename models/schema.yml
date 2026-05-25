@@ -1,3 +1,4 @@
+# Model docs/tests only. Catalog-backed sources live in models/sources.yml.
 version: 2
 
 models:

@@ -31,5 +31,6 @@ models:
       +catalog: "{{ env_var('JAFFLE_CUSTOMERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
       +schema: "{{ env_var('JAFFLE_CUSTOMERS_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
 flags:
+  # Required for top-level source catalog routing from models/sources.yml.
   require_generic_test_arguments_property: true
   use_catalogs_v2: true

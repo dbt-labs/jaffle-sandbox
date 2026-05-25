@@ -1,3 +1,4 @@
+# One DuckDB target for the demo; all external catalogs are defined in catalogs.yml.
 default:
   target: catalog_demo
   outputs:
