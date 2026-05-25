@@ -108,7 +108,8 @@ sources:
 
   - name: horizon_demo
     catalog: horizon_demo
-    schema: ICEBERGRESTPARTITIONBY
+    schema: "{{ env_var('HORIZON_SOURCE_SCHEMA', 'ICEBERGRESTPARTITIONBY') }}"
     tables:
       - name: MANAGED_TABLE
+        identifier: "{{ env_var('HORIZON_SOURCE_TABLE', 'MANAGED_TABLE') }}"
         description: Snowflake-managed Iceberg table visible through the Horizon REST catalog

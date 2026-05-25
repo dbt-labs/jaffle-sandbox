@@ -26,7 +26,7 @@ catalogs:
         default_schema: "default"
 
   - name: horizon_demo
-    type: iceberg_rest
+    type: horizon
     table_format: iceberg
     config:
       duckdb:
@@ -38,10 +38,6 @@ catalogs:
         default_region: "{{ env_var('HORIZON_REGION', 'us-west-2') }}"
         attach_as: "horizon_demo"
         default_schema: "{{ env_var('HORIZON_DEFAULT_SCHEMA', 'DEMO') }}"
-        support_stage_create: false
-        use_transaction_commit: false
-        skip_create_table_metadata_updates: true
-        allow_deletes: false
 
   - name: local_files
     type: local_filesystem
