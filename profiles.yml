@@ -127,6 +127,43 @@ default:
           oauth2_scope: "{{ env_var('HORIZON_OAUTH2_SCOPE') }}"
           oauth2_grant_type: "client_credentials"
 
+    # Full attachment smoke target. Use with catalogs.conference.full.example.yml
+    # to attach Polaris, Lakekeeper, Horizon, Unity Catalog, and local files in
+    # one DuckDB session. DATABRICKS_TOKEN should be a PAT with UC external
+    # access privileges.
+    conference_catalog_demo_full:
+      type: duckdb
+      path: "conference_catalog_demo.duckdb"
+      schema: main
+      settings:
+        allow_unsigned_extensions: true
+      extensions:
+        - httpfs
+        - iceberg
+      secrets:
+        - type: s3
+          name: minio_secret
+          key_id: minio-root-user
+          secret: minio-root-password
+          endpoint: "localhost:9000"
+          url_style: path
+          use_ssl: false
+        - type: iceberg
+          name: polaris_oauth
+          client_id: "{{ env_var('POLARIS_CLIENT_ID', '') or env_var('POLARIS_ID') }}"
+          client_secret: "{{ env_var('POLARIS_CLIENT_SECRET', '') or env_var('POLARIS_SECRET') }}"
+          oauth2_server_uri: "{{ env_var('POLARIS_OAUTH2_SERVER_URI', '') or ((env_var('POLARIS_URI', '') or env_var('POLARIS_URL')) ~ '/v1/oauth/tokens') }}"
+        - type: iceberg
+          name: horizon_oauth
+          client_id: ""
+          client_secret: "{{ env_var('HORIZON_PAT') }}"
+          oauth2_server_uri: "{{ env_var('HORIZON_OAUTH2_SERVER_URI') }}"
+          oauth2_scope: "{{ env_var('HORIZON_OAUTH2_SCOPE') }}"
+          oauth2_grant_type: "client_credentials"
+        - type: iceberg
+          name: databricks_pat
+          token: "{{ env_var('DATABRICKS_TOKEN', '') }}"
+
     # Original local DuckDB for baseline
     local:
       type: duckdb
