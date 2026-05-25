@@ -1,4 +1,6 @@
 services:
+  # Local Iceberg REST stack for the demo:
+  # Lakekeeper uses Postgres for catalog metadata and MinIO for table data.
   lakekeeper:
     image: quay.io/lakekeeper/catalog:latest-main
     environment:
