@@ -85,12 +85,13 @@ $DBT show --profiles-dir . --target conference_catalog_demo_horizon --inline 'se
 ```
 
 This avoids the 15-token Snowflake PAT cap by using a short-lived JWT as the
-OAuth client secret. The local proof used the patched local DuckDB-Iceberg
+OAuth client secret. The local proof used the local DuckDB 1.5.3 Iceberg
 extension cache and Snowflake-managed Iceberg table
 `horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE`, which is visible through
-the Horizon REST catalog and currently returns 17 rows. Stock DuckDB-Iceberg may
-still reject the Horizon-specific REST ATTACH options until the extension patch
-lands upstream.
+the Horizon REST catalog and currently returns 18 rows. Existing-table reads
+and inserts work through Horizon with this local DuckDB 1.5.3 extension cache;
+new-table materialization still needs a create-authorized Horizon PAT or role
+before it can be proved.
 
 The Horizon-enabled demo now runs both models in one command: Polaris reads and
 Horizon reads are both materialized into Lakekeeper Iceberg tables through the
@@ -110,7 +111,7 @@ until MotherDuck publishes a compatible extension.
 
 ## Verified Local Probes
 
-These passed with the debug binary on May 25, 2026 (`3d3986ebeb`):
+These passed with the debug binary on May 25, 2026 (`709b460e72`):
 
 ```bash
 $DBT run --profiles-dir . --target local --select tag:catalog_builtin --no-partial-parse
@@ -132,11 +133,11 @@ Expected results:
 | Polaris Iceberg REST metadata | `tag:catalog_polaris_metadata` | `polaris_iceberg_rest` | Verified with debug `dbt show`; returns real `polaris_demo` tables. |
 | Polaris Iceberg REST data read | ad hoc inline query | `polaris_iceberg_rest` | Verified readable with DuckDB 1.5.3 when `DEFAULT_REGION 'us-west-2'` is present in the Iceberg REST ATTACH. Without it, DuckDB reaches the table but cannot resolve an object-store region from Polaris vended credentials. |
 | Polaris to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` | `conference_catalog_demo` | Verified source read from `polaris_demo.sql_server_covid19.us_states`, table write to `iceberg_demo.default.polaris_to_lakekeeper`, and readback `source_rows = 56`. |
-| Polaris + Lakekeeper + Horizon attachments | inline `duckdb_databases()` | `conference_catalog_demo_horizon` | Verified three Iceberg catalogs attached together: `polaris_demo`, `iceberg_demo`, and `horizon_demo`, using the patched local DuckDB-Iceberg extension cache. |
-| Snowflake Horizon to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true` | `conference_catalog_demo_horizon` | Verified read of Snowflake-managed Iceberg table `horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE` via Horizon, table write to `iceberg_demo.default.horizon_read_probe`, and readback `source_rows = 17`. |
+| Polaris + Lakekeeper + Horizon attachments | inline `duckdb_databases()` | `conference_catalog_demo_horizon` | Verified three Iceberg catalogs attached together: `polaris_demo`, `iceberg_demo`, and `horizon_demo`, using the local DuckDB 1.5.3 Iceberg extension cache. |
+| Snowflake Horizon to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true` | `conference_catalog_demo_horizon` | Verified read of Snowflake-managed Iceberg table `horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE` via Horizon, table write to `iceberg_demo.default.horizon_read_probe`, and readback `source_rows = 18`. |
 | Polaris via PyIceberg | direct PyIceberg probe | n/a | PyIceberg can authenticate, list namespaces, and read tables such as `sql_server_covid19.us_states`, `sql_server_covid19.us`, and `sql_server_dbo.district`. It rejects some `aaron_fb_ads` tables because their metadata contains a custom statistics blob type `fivetran-synced-distribution`, while DuckDB reads those tables successfully. |
 | Unity Catalog Iceberg REST | not configured | add a local-only catalog file | Cross-engine reads should work; DuckDB writes to UC remain blocked by open DuckDB Iceberg bugs. |
-| Snowflake Horizon write | optional / disabled by default | `conference_catalog_demo_horizon` | Still requires the DuckDB-Iceberg Horizon write semantics patch. The write repro model stays opt-in with `ENABLE_HORIZON_WRITE_MODEL=true`. |
+| Snowflake Horizon write | optional / disabled by default | `conference_catalog_demo_horizon` | Existing-table insert is proven through Horizon; new-table materialization still fails with Horizon REST `403 Authorization failed` for the current `TESTER` role/PAT. The write repro model stays opt-in with `ENABLE_HORIZON_WRITE_MODEL=true` until a create-authorized Horizon PAT/role is available. |
 
 ## Cheap Checks
 
