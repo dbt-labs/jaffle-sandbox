@@ -1,4 +1,66 @@
 catalogs:
+  - name: lakekeeper
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "http://localhost:8181/catalog"
+        warehouse: "demo"
+        authorization_type: "NONE"
+        access_delegation_mode: "NONE"
+        attach_as: "lakekeeper"
+        default_schema: "default"
+
+  - name: polaris
+    type: iceberg_rest
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "{{ env_var('POLARIS_URI', '') or env_var('POLARIS_URL', 'https://example.polaris.catalog') }}"
+        warehouse: "{{ env_var('POLARIS_WAREHOUSE', 'demo') }}"
+        secret: polaris_oauth
+        authorization_type: "OAUTH2"
+        access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "{{ env_var('POLARIS_REGION', 'us-west-2') }}"
+        attach_as: "polaris"
+        default_schema: "sql_server_covid19"
+
+  - name: horizon
+    type: horizon
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "{{ env_var('HORIZON_ENDPOINT', 'https://example.snowflakecomputing.com/polaris/api/catalog') }}"
+        warehouse: "{{ env_var('HORIZON_WAREHOUSE', 'DEVELOPMENT') }}"
+        secret: horizon_oauth
+        authorization_type: "OAUTH2"
+        access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "{{ env_var('HORIZON_REGION', 'us-west-2') }}"
+        attach_as: "horizon"
+        default_schema: "{{ env_var('HORIZON_DEFAULT_SCHEMA', 'ICEBERGRESTPARTITIONBY') }}"
+
+  - name: unity
+    type: unity
+    table_format: iceberg
+    config:
+      duckdb:
+        endpoint: "{{ env_var('DATABRICKS_UC_ENDPOINT', 'https://example.cloud.databricks.com/api/2.1/unity-catalog/iceberg-rest') }}"
+        warehouse: "{{ env_var('DATABRICKS_UC_CATALOG', 'uc_managed_accepts_external_writes') }}"
+        secret: databricks_pat
+        authorization_type: "OAUTH2"
+        access_delegation_mode: "VENDED_CREDENTIALS"
+        default_region: "{{ env_var('DATABRICKS_UC_REGION', 'us-west-2') }}"
+        attach_as: "unity"
+        default_schema: "{{ env_var('DATABRICKS_UC_SCHEMA', 'foo') }}"
+
+  - name: ducklake
+    type: ducklake
+    table_format: default
+    config:
+      duckdb:
+        metadata_path: "jaffle_ducklake_v1.ducklake"
+        attach_as: "ducklake"
+
   - name: local_files
     type: local_filesystem
     table_format: default

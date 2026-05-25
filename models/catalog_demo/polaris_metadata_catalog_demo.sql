@@ -8,4 +8,4 @@ select
   table_schema,
   table_name
 from system.information_schema.tables
-where table_catalog = 'polaris_demo'
+where table_catalog = 'polaris'

@@ -1,0 +1,27 @@
+version: 2
+
+sources:
+  - name: polaris_covid
+    catalog: polaris
+    schema: sql_server_covid19
+    tables:
+      - name: us_states
+        description: Read-only Polaris Iceberg REST source table.
+      - name: us
+        description: Read-only Polaris Iceberg REST source table.
+
+  - name: horizon_managed
+    catalog: horizon
+    schema: "{{ env_var('HORIZON_SOURCE_SCHEMA', 'ICEBERGRESTPARTITIONBY') }}"
+    tables:
+      - name: managed_table
+        identifier: "{{ env_var('HORIZON_SOURCE_TABLE', 'MANAGED_TABLE') }}"
+        description: Snowflake-managed Iceberg table visible through Horizon REST.
+
+  - name: local_files
+    catalog: local_files
+    tables:
+      - name: raw_orders
+        description: Raw orders read directly from the local filesystem catalog.
+        config:
+          external_location: "local_files/raw_orders.csv"

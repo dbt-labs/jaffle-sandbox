@@ -1,201 +1,138 @@
 # DuckDB Catalog Capability Demo
 
-This branch adds small catalog probes under `models/catalog_demo/`. The default
-project is intentionally runnable without any external catalog service.
+This branch keeps the demo as the normal jaffle-shop DAG. Catalog behavior is
+controlled by model config, not by separate proof-only models or profile
+targets.
 
-Fusion currently initializes every DuckDB v2 REST catalog present in
-`catalogs.yml` before model selection. Keep only the catalog backend under test
-in `catalogs.yml`; otherwise an unhealthy REST catalog can block unrelated
-local DuckDB, DuckLake, or local filesystem probes.
+## Shape
 
-## Debug Binary
+- `catalogs.yml` contains the catalog definitions used by the demo: Lakekeeper,
+  Polaris, Snowflake Horizon, Databricks Unity Catalog, DuckLake, and local
+  files.
+- `profiles.yml` has one DuckDB target: `catalog_demo`.
+- `profiles.yml` does not use DuckDB `attach:` blocks; catalog attachment comes
+  from `catalogs.yml`.
+- `dbt_project.yml` defaults model writes to the built-in DuckDB catalog with
+  `JAFFLE_CATALOG=builtin`.
+- Individual layers can move by setting `JAFFLE_STAGING_CATALOG`,
+  `JAFFLE_ORDERS_CATALOG`, and `JAFFLE_CUSTOMERS_CATALOG`.
 
-```bash
-DBT=/Users/dataders/Developer/fs/target/debug/dbt
+The important demo knob is `catalog`, for example:
+
+```yaml
+models:
+  jaffle_shop:
+    orders:
+      +catalog: "{{ env_var('JAFFLE_ORDERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
 ```
 
-## Catalog Files
+## Runtime
 
-Default local demo:
+Use the fs debug binary from the stacked Fusion branches:
 
 ```bash
-cp catalogs.local.example.yml catalogs.yml
-$DBT parse --profiles-dir . --target catalog_showcase --no-partial-parse
+export DBT=/Users/dataders/Developer/fs/target/debug/dbt
 ```
 
-Lakekeeper Iceberg REST demo:
+Start Lakekeeper, Postgres, and MinIO for the local writable Iceberg REST
+catalog:
 
 ```bash
-cp catalogs.lakekeeper.example.yml catalogs.yml
 docker-compose up -d
-$DBT run-operation lakekeeper_insert_probe --profiles-dir . --target iceberg_rest --no-partial-parse
-$DBT show --profiles-dir . --target iceberg_rest --inline 'select count(*) as rows from iceberg_demo.default.lakekeeper_insert_probe' --limit 1 --output json --no-partial-parse
 ```
 
-Lakekeeper verifies both DuckDB Iceberg `CREATE TABLE` + `INSERT` and dbt table
-materialization via create-then-insert when the runtime is DuckDB `1.5.3` with
-a fresh `iceberg` extension cache.
-
-Polaris Iceberg REST demo:
+Set remote catalog credentials in the environment before running the full demo:
 
 ```bash
-cp catalogs.polaris.example.yml catalogs.yml
-export POLARIS_URI=...                 # local secrets.zsh uses POLARIS_URL
+export POLARIS_URI=...
 export POLARIS_WAREHOUSE=...
-export POLARIS_CLIENT_ID=...           # local secrets.zsh uses POLARIS_ID
-export POLARIS_CLIENT_SECRET=...       # local secrets.zsh uses POLARIS_SECRET
+export POLARIS_CLIENT_ID=...
+export POLARIS_CLIENT_SECRET=...
 export POLARIS_OAUTH2_SERVER_URI="${POLARIS_URI%/}/v1/oauth/tokens"
-$DBT show --profiles-dir . --target polaris_iceberg_rest --select tag:catalog_polaris_metadata --limit 5 --output json --no-partial-parse
-$DBT show --profiles-dir . --target polaris_iceberg_rest --inline 'select count(*) as rows from polaris_demo.sql_server_covid19.us_states' --limit 1 --output json --no-partial-parse
+
+export HORIZON_ENDPOINT=...
+export HORIZON_WAREHOUSE=...
+export HORIZON_PAT=...
+export HORIZON_OAUTH2_SERVER_URI="${HORIZON_ENDPOINT%/}/v1/oauth/tokens"
+export HORIZON_OAUTH2_SCOPE="session:role:<role>"
+export HORIZON_DEFAULT_SCHEMA=ICEBERGRESTPARTITIONBY
+
+export DATABRICKS_UC_ENDPOINT=...
+export DATABRICKS_UC_CATALOG=...
+export DATABRICKS_UC_SCHEMA=...
+export DATABRICKS_TOKEN=...
 ```
 
-For OAuth-backed Iceberg REST catalogs, DuckDB expects credentials in a
-`TYPE iceberg` secret and `catalogs.yml` references that secret by name during
-`ATTACH`.
+`HORIZON_PAT` should be a retained/static token secret. The old helper that
+generated a short-lived key-pair JWT is intentionally not part of the main
+demo path.
 
-Avoid using `dbt debug --connection` in a live demo with real Polaris
-environment variables; it prints the rendered profile, including secret fields.
+## Runs
 
-Reference: <https://duckdb.org/docs/current/core_extensions/iceberg/iceberg_rest_catalogs>
-
-Conference cross-catalog demo:
+Default run, all jaffle models in built-in DuckDB:
 
 ```bash
-cp catalogs.conference.example.yml catalogs.yml
-$DBT run --profiles-dir . --target conference_catalog_demo --select tag:conference_catalog_demo --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo --inline 'select * from iceberg_demo.default.polaris_to_lakekeeper' --output json --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo --inline 'select database_name from duckdb_databases() order by 1' --output json --no-partial-parse
+$DBT seed --profiles-dir . --target catalog_demo --no-partial-parse
+$DBT run --profiles-dir . --target catalog_demo --no-partial-parse
 ```
 
-The default conference catalog file intentionally omits Horizon so the
-Polaris-to-Lakekeeper write path stays simple. To add Horizon reads, copy
-`catalogs.conference.horizon.example.yml` to `catalogs.yml`, generate Horizon
-OAuth env vars from a Snowflake key-pair profile, and enable the Horizon read
-model on the `conference_catalog_demo_horizon` target.
+Move the staging layer to Lakekeeper and marts to Horizon:
 
 ```bash
-cp catalogs.conference.horizon.example.yml catalogs.yml
-uv run --no-project --with pyyaml --with pyjwt --with cryptography \
-  scripts/horizon_keypair_env.py --profile fusion_tests --target snowflake \
-  > /tmp/horizon_env.sh
-source /tmp/horizon_env.sh
-ENABLE_HORIZON_READ_MODEL=true $DBT run --profiles-dir . --target conference_catalog_demo_horizon --select tag:conference_catalog_demo --no-partial-parse
-ENABLE_HORIZON_READ_MODEL=true $DBT show --profiles-dir . --target conference_catalog_demo_horizon --inline "select 'polaris_to_lakekeeper' as model, * from iceberg_demo.default.polaris_to_lakekeeper union all select 'horizon_read_probe' as model, * from iceberg_demo.default.horizon_read_probe order by model" --output json --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_horizon --inline 'select database_name, type from duckdb_databases() order by 1' --output json --no-partial-parse
+JAFFLE_STAGING_CATALOG=lakekeeper \
+JAFFLE_STAGING_SCHEMA=default \
+JAFFLE_ORDERS_CATALOG=horizon \
+JAFFLE_ORDERS_SCHEMA=ICEBERGRESTPARTITIONBY \
+JAFFLE_CUSTOMERS_CATALOG=horizon \
+JAFFLE_CUSTOMERS_SCHEMA=ICEBERGRESTPARTITIONBY \
+$DBT run --profiles-dir . --target catalog_demo --full-refresh --no-partial-parse
 ```
 
-This avoids the 15-token Snowflake PAT cap by using a short-lived JWT as the
-OAuth client secret. The local proof used the local DuckDB 1.5.3 Iceberg
-extension cache and Snowflake-managed Iceberg table
-`horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE`, which is visible through
-the Horizon REST catalog and currently returns 18 rows. Existing-table reads,
-existing-table inserts, and new dbt table materialization work through Horizon
-with this local DuckDB 1.5.3 extension cache when the target Snowflake schema
-has a default external volume. The local write proof uses
-`DEVELOPMENT.ICEBERGRESTPARTITIONBY`, which has
-`EXTERNAL_VOLUME = S3_ICEBERG_SNOW`.
-
-The Horizon-enabled demo now runs both models in one command: Polaris reads and
-Horizon reads are both materialized into Lakekeeper Iceberg tables through the
-vanilla Fusion DuckDB adapter.
-
-Full attachment + cross-catalog smoke test:
+Move the whole DAG to DuckLake:
 
 ```bash
-cp catalogs.conference.full.example.yml catalogs.yml
-uv run --no-project --with pyyaml --with pyjwt --with cryptography \
-  scripts/horizon_keypair_env.py --profile fusion_tests --target snowflake \
-  > /tmp/horizon_env.sh
-source /tmp/horizon_env.sh
-export DATABRICKS_UC_ENDPOINT="https://<workspace>/api/2.1/unity-catalog/iceberg-rest"
-export DATABRICKS_UC_CATALOG="<unity_catalog_name>"
-export DATABRICKS_UC_SCHEMA="<schema_name>"
-export DATABRICKS_TOKEN="<databricks_pat>"
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline 'select database_name, type from duckdb_databases() order by 1' --output json --no-partial-parse
-ENABLE_HORIZON_READ_MODEL=true \
-ENABLE_HORIZON_WRITE_MODEL=true \
-ENABLE_UNITY_WRITE_MODEL=true \
-HORIZON_SOURCE_SCHEMA=ICEBERGRESTPARTITIONBY \
-HORIZON_WRITE_SCHEMA=ICEBERGRESTPARTITIONBY \
-$DBT run --profiles-dir . --target conference_catalog_demo_full --select tag:conference_catalog_demo --full-refresh --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline "select source_catalog, sink_catalog, source_rows from iceberg_demo.default.polaris_to_lakekeeper" --output json --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline "select source_catalog, sink_catalog, source_rows from iceberg_demo.default.horizon_read_probe" --output json --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline "select source_catalog, sink_catalog, source_rows from horizon_demo.ICEBERGRESTPARTITIONBY.polaris_to_horizon_write_repro" --output json --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline "select sink_catalog, writer, proof_rows from unity_demo.foo.unity_write_proof" --output json --no-partial-parse
+JAFFLE_CATALOG=ducklake \
+JAFFLE_SCHEMA=main \
+$DBT run --profiles-dir . --target catalog_demo --full-refresh --no-partial-parse
 ```
 
-This target is for showing the abstraction boundary: one `catalogs.yml` can
-attach Polaris, Lakekeeper, Horizon, Unity Catalog, and local files. The full
-target runs Polaris reads into Lakekeeper, Horizon reads into Lakekeeper,
-Polaris reads into Horizon, and a Unity Catalog managed Iceberg write in one
-vanilla Fusion DuckDB invocation.
-
-Unity Catalog writes require the patched DuckDB-Iceberg extension branch
-`dataders/codex/demo-horizon-uc-write-compat`. That branch includes the
-manifest schema-header fix and scopes UC vended credentials to the Iceberg
-table data path instead of the metadata path. The local proof uses
-`uc_managed_accepts_external_writes.foo`, with the Databricks profile token
-granted `USE CATALOG`, `USE SCHEMA`, `EXTERNAL USE SCHEMA`, `CREATE TABLE`,
-and ownership of the demo proof table.
-
-MotherDuck DuckLake demo:
+Read source tables routed through catalog definitions:
 
 ```bash
-MOTHERDUCK_TOKEN=... $DBT run --profiles-dir . --target ducklake_md_no_path --select tag:catalog_remote_ducklake --no-partial-parse
-MOTHERDUCK_TOKEN=... $DBT show --profiles-dir . --target ducklake_md_no_path --inline "select count(*) as rows from jaffle_ducklake_remote_demo.main.remote_ducklake_catalog_demo" --limit 1 --output json --no-partial-parse
+$DBT show --profiles-dir . --target catalog_demo \
+  --inline 'select count(*) as rows from polaris.sql_server_covid19.us_states' \
+  --output json --no-partial-parse
+
+$DBT show --profiles-dir . --target catalog_demo \
+  --inline 'select count(*) as rows from horizon.ICEBERGRESTPARTITIONBY.MANAGED_TABLE' \
+  --output json --no-partial-parse
 ```
 
-The MotherDuck target intentionally keeps the token out of the `attach.path`.
-The current working database for this token is `jaffle_ducklake_remote_demo`.
-MotherDuck currently rejects DuckDB `1.5.3`; use DuckDB `1.5.2` for this probe
-until MotherDuck publishes a compatible extension.
+## Current Capability Notes
 
-## Verified Local Probes
+| Catalog | Demo role | Status |
+| --- | --- | --- |
+| Built-in DuckDB | Default write target | Works as the default `builtin` catalog. |
+| Local DuckLake | Optional write target | Works through `catalog: ducklake`. |
+| Local files | Source catalog | `source('local_files', 'raw_orders')` declares the local filesystem source. |
+| Lakekeeper | Writable Iceberg REST target | Works for DuckDB/Fusion writes when the local service is running. |
+| Polaris | Read-only source catalog for this demo | Reads work; do not use it as a write target in the conference demo. |
+| Snowflake Horizon | Writable Iceberg REST target | Writes require a Horizon schema with a default external volume and DuckDB CTAS fallback to create-then-insert. |
+| Databricks Unity Catalog | Writable Iceberg REST target | Writes require the patched DuckDB-Iceberg branch with the manifest schema-header and UC vended-credential fixes. |
 
-These passed with the debug binary on May 25, 2026. The newest full-catalog
-proof used fs `8529692b39`, the patched DuckDB-Iceberg extension at
-`81c059a3`, and this demo branch at `f9cca03`:
+The DuckDB-Iceberg demo extension branch is
+`dataders/codex/demo-horizon-uc-write-compat`.
 
-```bash
-$DBT run --profiles-dir . --target local --select tag:catalog_builtin --no-partial-parse
-$DBT run --profiles-dir . --target ducklake_no_path --select tag:catalog_local_ducklake --no-partial-parse
-$DBT run --profiles-dir . --target catalog_showcase --select tag:catalog_local_filesystem --no-partial-parse
-```
+## Source Declarations
 
-Expected results:
+`models/sources.yml` declares Polaris, Horizon, and local filesystem sources.
+That keeps read-only catalog access in dbt source definitions instead of
+embedding direct three-part names throughout the model DAG.
 
-| Capability | Selector | Target | Status |
-| --- | --- | --- | --- |
-| Built-in DuckDB catalog write | `tag:catalog_builtin` | `local` | Verified writable table. |
-| Local DuckLake catalog write | `tag:catalog_local_ducklake` | `ducklake_no_path` | Verified writable table via a fresh `ducklake:` metadata file. Older local `jaffle_ducklake.ducklake` metadata was version `0.3`; DuckLake now expects version `1.0`. |
-| Local filesystem external write | `tag:catalog_local_filesystem` | `catalog_showcase` | Verified external CSV write from `source('local_files', 'raw_orders')`; readback returned `source_rows = 6`. |
-| MotherDuck DuckLake catalog write | `tag:catalog_remote_ducklake` | `ducklake_md_no_path` | Blocked on DuckDB `1.5.3`: MotherDuck reports latest supported DuckDB version is `1.5.2`. |
-| Lakekeeper Iceberg REST create/insert/read | `lakekeeper_insert_probe` | `iceberg_rest` | Verified with debug `dbt run-operation` plus readback count. |
-| Lakekeeper Iceberg REST table materialization | `tag:catalog_iceberg_rest` | `iceberg_rest` | Verified writable table via dbt/Fusion create-then-insert with DuckDB 1.5.3; readback returned 1 row. |
-| Lakekeeper via PyIceberg | direct PyIceberg probe | n/a | Verified PyIceberg can list the `default` namespace and read `default.iceberg_rest_catalog_demo` and `default.lakekeeper_insert_probe`, each with 1 row. |
-| Polaris Iceberg REST metadata | `tag:catalog_polaris_metadata` | `polaris_iceberg_rest` | Verified with debug `dbt show`; returns real `polaris_demo` tables. |
-| Polaris Iceberg REST data read | ad hoc inline query | `polaris_iceberg_rest` | Verified readable with DuckDB 1.5.3 when `DEFAULT_REGION 'us-west-2'` is present in the Iceberg REST ATTACH. Without it, DuckDB reaches the table but cannot resolve an object-store region from Polaris vended credentials. |
-| Polaris to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` | `conference_catalog_demo` | Verified source read from `polaris_demo.sql_server_covid19.us_states`, table write to `iceberg_demo.default.polaris_to_lakekeeper`, and readback `source_rows = 56`. |
-| Polaris + Lakekeeper + Horizon attachments | inline `duckdb_databases()` | `conference_catalog_demo_horizon` | Verified three Iceberg catalogs attached together: `polaris_demo`, `iceberg_demo`, and `horizon_demo`, using the local DuckDB 1.5.3 Iceberg extension cache. |
-| Snowflake Horizon to Lakekeeper cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true` | `conference_catalog_demo_horizon` | Verified read of Snowflake-managed Iceberg table `horizon_demo.ICEBERGRESTPARTITIONBY.MANAGED_TABLE` via Horizon, table write to `iceberg_demo.default.horizon_read_probe`, and readback `source_rows = 18`. |
-| Full Polaris + Lakekeeper + Horizon + Unity attachment | inline `duckdb_databases()` | `conference_catalog_demo_full` | Verified `polaris_demo`, `iceberg_demo`, `horizon_demo`, and `unity_demo` attached as Iceberg catalogs in one DuckDB session. |
-| Full target cross-catalog write | `tag:conference_catalog_demo` with `ENABLE_HORIZON_READ_MODEL=true`, `ENABLE_HORIZON_WRITE_MODEL=true`, and `ENABLE_UNITY_WRITE_MODEL=true` | `conference_catalog_demo_full` | Verified 4 models in one run: Polaris to Lakekeeper (`source_rows = 56`), Horizon to Lakekeeper (`source_rows = 18`), Polaris to Horizon (`source_rows = 56`), and Unity managed Iceberg write (`proof_rows = 1`). |
-| Polaris via PyIceberg | direct PyIceberg probe | n/a | PyIceberg can authenticate, list namespaces, and read tables such as `sql_server_covid19.us_states`, `sql_server_covid19.us`, and `sql_server_dbo.district`. It rejects some `aaron_fb_ads` tables because their metadata contains a custom statistics blob type `fivetran-synced-distribution`, while DuckDB reads those tables successfully. |
-| Unity Catalog Iceberg REST write | `unity_write_proof` with `ENABLE_UNITY_WRITE_MODEL=true` | `conference_catalog_demo_full` | Verified new-table dbt materialization and readback through DuckDB/Fusion using the patched DuckDB-Iceberg extension and current Databricks profile-token grants. |
-| Snowflake Horizon write | `polaris_to_horizon_write_repro` with `ENABLE_HORIZON_WRITE_MODEL=true` | `conference_catalog_demo_full` | Verified new-table dbt materialization into Horizon from a Polaris source, with readback `source_rows = 56`. Requires a target Snowflake schema with a default external volume; the local proof uses `ICEBERGRESTPARTITIONBY`. |
+## Stack Pointers
 
-## Cheap Checks
-
-```bash
-$DBT parse --profiles-dir . --target catalog_showcase --no-partial-parse
-$DBT ls --profiles-dir . --target catalog_showcase --select tag:capability_probe --no-partial-parse
-$DBT ls --profiles-dir . --target ducklake_no_path --select tag:catalog_local_ducklake --no-partial-parse
-MOTHERDUCK_TOKEN=... $DBT ls --profiles-dir . --target ducklake_md_no_path --select tag:catalog_remote_ducklake --no-partial-parse
-$DBT ls --profiles-dir . --target polaris_iceberg_rest --select tag:catalog_polaris_metadata --no-partial-parse
-$DBT show --profiles-dir . --target conference_catalog_demo_full --inline 'select database_name, type from duckdb_databases() order by 1' --output json --no-partial-parse
-ENABLE_HORIZON_READ_MODEL=true $DBT ls --profiles-dir . --target conference_catalog_demo_full --select tag:conference_catalog_demo --no-partial-parse
-```
-
-`ducklake_md_no_path` attaches `md:jaffle_ducklake_remote_demo`; the MotherDuck
-extension reads `MOTHERDUCK_TOKEN` from the runtime environment, so even static
-`parse` or `ls` checks for that target need the environment variable set.
+- fs PR #10457: conference catalog routing demo base.
+- fs PR #10464: DuckDB Snowflake Horizon catalog support.
+- fs PR #10478: DuckDB Unity Catalog attachment support.
+- DuckDB-Iceberg branch `codex/demo-horizon-uc-write-compat`: Horizon write
+  compatibility plus Unity Catalog write fixes.

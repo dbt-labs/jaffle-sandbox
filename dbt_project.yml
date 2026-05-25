@@ -16,24 +16,22 @@ clean-targets:
   - "logs"
 
 models:
-  +static_analysis: off
   jaffle_shop:
     +materialized: table
-    catalog_demo:
-      iceberg_rest_catalog_demo:
-        +enabled: "{{ target.name == 'iceberg_rest' }}"
-      local_ducklake_catalog_demo:
-        +enabled: "{{ target.name == 'ducklake_no_path' }}"
-      polaris_metadata_catalog_demo:
-        +enabled: "{{ target.name == 'polaris_iceberg_rest' }}"
-      remote_ducklake_catalog_demo:
-        +enabled: "{{ target.name == 'ducklake_md_no_path' }}"
-      local_filesystem_catalog_demo:
-        +enabled: "{{ target.name == 'catalog_showcase' }}"
-      conference_catalog_demo:
-        +enabled: "{{ target.name in ['conference_catalog_demo', 'conference_catalog_demo_horizon', 'conference_catalog_demo_full'] }}"
+    +catalog: "{{ env_var('JAFFLE_CATALOG', 'builtin') }}"
+    +schema: "{{ env_var('JAFFLE_SCHEMA', 'main') }}"
     staging:
       +materialized: table
+      +catalog: "{{ env_var('JAFFLE_STAGING_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
+      +schema: "{{ env_var('JAFFLE_STAGING_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+    orders:
+      +catalog: "{{ env_var('JAFFLE_ORDERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
+      +schema: "{{ env_var('JAFFLE_ORDERS_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+    customers:
+      +catalog: "{{ env_var('JAFFLE_CUSTOMERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
+      +schema: "{{ env_var('JAFFLE_CUSTOMERS_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+    catalog_demo:
+      +enabled: false
 flags:
   require_generic_test_arguments_property: true
   use_catalogs_v2: true
