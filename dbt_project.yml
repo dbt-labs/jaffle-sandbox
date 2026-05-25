@@ -31,7 +31,7 @@ models:
       local_filesystem_catalog_demo:
         +enabled: "{{ target.name == 'catalog_showcase' }}"
       conference_catalog_demo:
-        +enabled: "{{ target.name in ['conference_catalog_demo', 'conference_catalog_demo_horizon'] }}"
+        +enabled: "{{ target.name in ['conference_catalog_demo', 'conference_catalog_demo_horizon', 'conference_catalog_demo_full'] }}"
     staging:
       +materialized: table
 flags:
