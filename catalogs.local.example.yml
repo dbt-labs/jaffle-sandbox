@@ -1,8 +1,0 @@
-catalogs:
-  - name: local_files
-    type: local_filesystem
-    table_format: default
-    config:
-      duckdb:
-        root_path: "local_files"
-        file_format: csv
