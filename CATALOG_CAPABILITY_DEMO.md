@@ -12,10 +12,9 @@ targets.
 - `profiles.yml` has one DuckDB target: `catalog_demo`.
 - `profiles.yml` does not use DuckDB `attach:` blocks; catalog attachment comes
   from `catalogs.yml`.
-- `dbt_project.yml` defaults model writes to the built-in DuckDB catalog with
-  `JAFFLE_CATALOG=builtin`.
-- Individual layers can move by setting `JAFFLE_STAGING_CATALOG`,
-  `JAFFLE_ORDERS_CATALOG`, and `JAFFLE_CUSTOMERS_CATALOG`.
+- `dbt_project.yml` defaults model writes to the built-in DuckDB catalog.
+- To move a layer, edit that layer's `+catalog` in `dbt_project.yml` to one of
+  the names in `catalogs.yml`.
 
 The important demo knob is `catalog`, for example:
 
@@ -23,7 +22,34 @@ The important demo knob is `catalog`, for example:
 models:
   jaffle_shop:
     orders:
-      +catalog: "{{ env_var('JAFFLE_ORDERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
+      +catalog: horizon
+```
+
+## Catalog Flow
+
+```mermaid
+flowchart LR
+    seeds["Seeds\nbuiltin"]
+    sources["External sources\nlocal_files / Polaris / Horizon"]
+    staging["Staging models\nedit +catalog"]
+    orders["orders\nedit +catalog"]
+    customers["customers\nedit +catalog"]
+    ducklake["DuckLake"]
+    lakekeeper["Lakekeeper\nIceberg REST"]
+    horizon["Snowflake Horizon"]
+    unity["Unity Catalog"]
+
+    seeds --> staging
+    sources --> staging
+    staging --> orders
+    staging --> customers
+
+    staging -. "catalog: ducklake" .-> ducklake
+    staging -. "catalog: lakekeeper" .-> lakekeeper
+    orders -. "catalog: horizon" .-> horizon
+    customers -. "catalog: horizon" .-> horizon
+    orders -. "catalog: unity" .-> unity
+    customers -. "catalog: unity" .-> unity
 ```
 
 ## Runtime
@@ -41,31 +67,24 @@ catalog:
 docker-compose up -d
 ```
 
-Set remote catalog credentials in the environment before running the full demo:
+Replace the placeholder remote endpoints and warehouses in `catalogs.yml` before
+running against Polaris, Horizon, or Unity Catalog. Keep only secret values in
+the environment:
 
 ```bash
-export POLARIS_URI=...
-export POLARIS_WAREHOUSE=...
 export POLARIS_CLIENT_ID=...
 export POLARIS_CLIENT_SECRET=...
-export POLARIS_OAUTH2_SERVER_URI="${POLARIS_URI%/}/v1/oauth/tokens"
+export POLARIS_OAUTH2_SERVER_URI=...
 
-export HORIZON_ENDPOINT=...
-export HORIZON_WAREHOUSE=...
 export HORIZON_PAT=...
-export HORIZON_OAUTH2_SERVER_URI="${HORIZON_ENDPOINT%/}/v1/oauth/tokens"
+export HORIZON_OAUTH2_SERVER_URI=...
 export HORIZON_OAUTH2_SCOPE="session:role:<role>"
-export HORIZON_DEFAULT_SCHEMA=ICEBERGRESTPARTITIONBY
 
-export DATABRICKS_UC_ENDPOINT=...
-export DATABRICKS_UC_CATALOG=...
-export DATABRICKS_UC_SCHEMA=...
 export DATABRICKS_TOKEN=...
 ```
 
-`HORIZON_PAT` should be a retained/static token secret. The old helper that
-generated a short-lived key-pair JWT is intentionally not part of the main
-demo path.
+`HORIZON_PAT` is a personal access token (`PAT`) that has access to the
+Snowflake Horizon catalog.
 
 ## Runs
 
@@ -76,29 +95,35 @@ $DBT seed --profiles-dir . --target catalog_demo --no-partial-parse
 $DBT run --profiles-dir . --target catalog_demo --no-partial-parse
 ```
 
-Move the staging layer to Lakekeeper and marts to Horizon:
+Move the staging layer to Lakekeeper and marts to Horizon by editing
+`dbt_project.yml`:
+
+```yaml
+models:
+  jaffle_shop:
+    staging:
+      +catalog: lakekeeper
+    orders:
+      +catalog: horizon
+    customers:
+      +catalog: horizon
+```
+
+Then run:
 
 ```bash
-JAFFLE_STAGING_CATALOG=lakekeeper \
-JAFFLE_STAGING_SCHEMA=default \
-JAFFLE_ORDERS_CATALOG=horizon \
-JAFFLE_ORDERS_SCHEMA=ICEBERGRESTPARTITIONBY \
-JAFFLE_CUSTOMERS_CATALOG=horizon \
-JAFFLE_CUSTOMERS_SCHEMA=ICEBERGRESTPARTITIONBY \
 $DBT run --profiles-dir . --target catalog_demo --full-refresh --no-partial-parse
 ```
 
-Move the whole DAG to DuckLake:
-
-```bash
-JAFFLE_CATALOG=ducklake \
-JAFFLE_SCHEMA=main \
-$DBT run --profiles-dir . --target catalog_demo --full-refresh --no-partial-parse
-```
+Move the whole DAG to DuckLake by setting the top-level and layer `+catalog`
+values to `ducklake` in `dbt_project.yml`.
 
 Read source tables routed through catalog definitions:
 
 ```bash
+$DBT run --profiles-dir . --target catalog_demo \
+  --select stg_local_file_orders --no-partial-parse
+
 $DBT show --profiles-dir . --target catalog_demo \
   --inline 'select count(*) as rows from polaris.sql_server_covid19.us_states' \
   --output json --no-partial-parse
@@ -119,6 +144,10 @@ $DBT show --profiles-dir . --target catalog_demo \
 | Polaris | Read-only source catalog for this demo | Reads work; do not use it as a write target in the conference demo. |
 | Snowflake Horizon | Writable Iceberg REST target | Writes require a Horizon schema with a default external volume and DuckDB CTAS fallback to create-then-insert. |
 | Databricks Unity Catalog | Writable Iceberg REST target | Writes require the patched DuckDB-Iceberg branch with the manifest schema-header and UC vended-credential fixes. |
+
+Unity Catalog with Delta tables would be a useful follow-up demo. This branch
+does not add it because current Fusion catalog validation accepts
+`table_format: default` and `table_format: iceberg`, not `delta`.
 
 The DuckDB-Iceberg demo extension branch is
 `dataders/codex/demo-horizon-uc-write-compat`.

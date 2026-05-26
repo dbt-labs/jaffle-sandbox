@@ -18,18 +18,14 @@ clean-targets:
 models:
   jaffle_shop:
     +materialized: table
-    +catalog: "{{ env_var('JAFFLE_CATALOG', 'builtin') }}"
-    +schema: "{{ env_var('JAFFLE_SCHEMA', 'main') }}"
+    +catalog: builtin
     staging:
       +materialized: table
-      +catalog: "{{ env_var('JAFFLE_STAGING_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
-      +schema: "{{ env_var('JAFFLE_STAGING_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+      +catalog: builtin
     orders:
-      +catalog: "{{ env_var('JAFFLE_ORDERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
-      +schema: "{{ env_var('JAFFLE_ORDERS_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+      +catalog: builtin
     customers:
-      +catalog: "{{ env_var('JAFFLE_CUSTOMERS_CATALOG', env_var('JAFFLE_CATALOG', 'builtin')) }}"
-      +schema: "{{ env_var('JAFFLE_CUSTOMERS_SCHEMA', env_var('JAFFLE_SCHEMA', 'main')) }}"
+      +catalog: builtin
 flags:
   # Required for top-level source catalog routing from models/sources.yml.
   require_generic_test_arguments_property: true

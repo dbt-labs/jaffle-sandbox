@@ -16,12 +16,12 @@ catalogs:
     table_format: iceberg
     config:
       duckdb:
-        endpoint: "{{ env_var('POLARIS_URI', '') or env_var('POLARIS_URL', 'https://example.polaris.catalog') }}"
-        warehouse: "{{ env_var('POLARIS_WAREHOUSE', 'demo') }}"
+        endpoint: "https://example.polaris.catalog"
+        warehouse: "demo"
         secret: polaris_oauth
         authorization_type: "OAUTH2"
         access_delegation_mode: "VENDED_CREDENTIALS"
-        default_region: "{{ env_var('POLARIS_REGION', 'us-west-2') }}"
+        default_region: "us-west-2"
         attach_as: "polaris"
         default_schema: "sql_server_covid19"
 
@@ -30,28 +30,28 @@ catalogs:
     table_format: iceberg
     config:
       duckdb:
-        endpoint: "{{ env_var('HORIZON_ENDPOINT', 'https://example.snowflakecomputing.com/polaris/api/catalog') }}"
-        warehouse: "{{ env_var('HORIZON_WAREHOUSE', 'DEVELOPMENT') }}"
+        endpoint: "https://example.snowflakecomputing.com/polaris/api/catalog"
+        warehouse: "DEVELOPMENT"
         secret: horizon_oauth
         authorization_type: "OAUTH2"
         access_delegation_mode: "VENDED_CREDENTIALS"
-        default_region: "{{ env_var('HORIZON_REGION', 'us-west-2') }}"
+        default_region: "us-west-2"
         attach_as: "horizon"
-        default_schema: "{{ env_var('HORIZON_DEFAULT_SCHEMA', 'ICEBERGRESTPARTITIONBY') }}"
+        default_schema: "ICEBERGRESTPARTITIONBY"
 
   - name: unity
     type: unity
     table_format: iceberg
     config:
       duckdb:
-        endpoint: "{{ env_var('DATABRICKS_UC_ENDPOINT', 'https://example.cloud.databricks.com/api/2.1/unity-catalog/iceberg-rest') }}"
-        warehouse: "{{ env_var('DATABRICKS_UC_CATALOG', 'uc_managed_accepts_external_writes') }}"
+        endpoint: "https://example.cloud.databricks.com/api/2.1/unity-catalog/iceberg-rest"
+        warehouse: "uc_managed_accepts_external_writes"
         secret: databricks_pat
         authorization_type: "OAUTH2"
         access_delegation_mode: "VENDED_CREDENTIALS"
-        default_region: "{{ env_var('DATABRICKS_UC_REGION', 'us-west-2') }}"
+        default_region: "us-west-2"
         attach_as: "unity"
-        default_schema: "{{ env_var('DATABRICKS_UC_SCHEMA', 'foo') }}"
+        default_schema: "foo"
 
   - name: ducklake
     type: ducklake

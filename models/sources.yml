@@ -12,10 +12,10 @@ sources:
 
   - name: horizon_managed
     catalog: horizon
-    schema: "{{ env_var('HORIZON_SOURCE_SCHEMA', 'ICEBERGRESTPARTITIONBY') }}"
+    schema: ICEBERGRESTPARTITIONBY
     tables:
       - name: managed_table
-        identifier: "{{ env_var('HORIZON_SOURCE_TABLE', 'MANAGED_TABLE') }}"
+        identifier: MANAGED_TABLE
         description: Snowflake-managed Iceberg table visible through Horizon REST.
 
   - name: local_files
