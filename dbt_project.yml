@@ -18,7 +18,15 @@ clean-targets:
 models:
   jaffle_shop:
     +materialized: table
+    +catalog: builtin
     staging:
-      +materialized: view
+      +materialized: table
+      +catalog: builtin
+    orders:
+      +catalog: builtin
+    customers:
+      +catalog: builtin
 flags:
+  # Required for top-level source catalog routing from models/sources.yml.
   require_generic_test_arguments_property: true
+  use_catalogs_v2: true

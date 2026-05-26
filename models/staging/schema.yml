@@ -20,6 +20,14 @@ models:
               arguments:
                 values: ['placed', 'shipped', 'completed', 'return_pending', 'returned']
 
+  - name: stg_local_file_orders
+    description: Exercises source() against the local filesystem catalog.
+    columns:
+      - name: order_id
+        tests:
+          - unique
+          - not_null
+
   - name: stg_payments
     columns:
       - name: payment_id
