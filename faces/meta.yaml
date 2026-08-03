@@ -1,0 +1,19 @@
+# Directory defaults for every face under faces/
+#
+# meta.yaml is a *partial face* — it uses the exact same authoring surface as a
+# face file (source, theme, queries, charts, style, variables), but without a
+# layout. Its keys are deep-merged as defaults beneath every face in this
+# directory and its subdirectories; each face overrides what it sets.
+#
+# A meta.yaml deeper in the tree layers on top of the ones above it, and a face
+# always wins over meta. Nested style keys merge (a face setting style.board.margin
+# keeps a meta-supplied style.board.width).
+#
+# Uncomment and edit to set project-wide defaults:
+#
+# theme: cream            # apply a built-in or custom theme to every dashboard
+# source: my_warehouse    # default data source for faces that don't name one
+#
+# style:
+#   board:
+#     width: 1000

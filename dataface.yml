@@ -1,0 +1,22 @@
+# Dataface project configuration
+#
+# This file anchors your project root. Running `dft serve` from any
+# subdirectory will walk up to find this file and use its directory
+# as the serve root.
+#
+# Credentials and database identity stay in dbt profiles.yml / env vars.
+# Only Dataface runtime and serving preferences belong here.
+#
+# serve:
+#   # Override the SQL dialect (auto-detected from dbt profile when possible)
+#   # dialect: bigquery
+#
+#   # dbt target override (defaults to DBT_TARGET env var, then profile default)
+#   # target: dev
+
+sources:
+  warehouse:
+    type: dbt_profile
+    profile: default
+    target: default
+

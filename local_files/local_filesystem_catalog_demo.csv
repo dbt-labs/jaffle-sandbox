@@ -1,0 +1,2 @@
+demo_order,catalog_name,storage_type,source_rows
+5,local_filesystem,local csv source + parquet external model,6

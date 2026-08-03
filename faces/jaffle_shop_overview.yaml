@@ -1,0 +1,114 @@
+title: Jaffle Shop Overview
+description: Orders, revenue, and customer KPIs for the jaffle_shop dbt project.
+
+source: warehouse
+
+queries:
+  kpi_totals:
+    description: Total orders, total revenue, and total customers across all time.
+    sql: |
+      SELECT
+        (SELECT COUNT(*) FROM orders) AS total_orders,
+        (SELECT SUM(amount) FROM orders) AS total_revenue,
+        (SELECT COUNT(*) FROM customers) AS total_customers
+
+  revenue_by_month:
+    description: Monthly revenue trend across all orders.
+    sql: |
+      SELECT DATE_TRUNC('month', order_date) AS month, SUM(amount) AS revenue
+      FROM orders
+      GROUP BY 1
+      ORDER BY 1
+
+  orders_by_status:
+    description: Order count broken down by fulfillment status.
+    sql: SELECT status, COUNT(*) AS n FROM orders GROUP BY status
+
+  revenue_by_payment_method:
+    description: Total revenue collected by each payment method.
+    sql: |
+      SELECT 'credit_card' AS payment_method, SUM(credit_card_amount) AS amount FROM orders
+      UNION ALL
+      SELECT 'coupon', SUM(coupon_amount) FROM orders
+      UNION ALL
+      SELECT 'bank_transfer', SUM(bank_transfer_amount) FROM orders
+      UNION ALL
+      SELECT 'gift_card', SUM(gift_card_amount) FROM orders
+
+  top_customers:
+    description: Top 10 customers ranked by lifetime value.
+    sql: |
+      SELECT first_name, last_name, number_of_orders, customer_lifetime_value
+      FROM customers
+      WHERE customer_lifetime_value IS NOT NULL
+      ORDER BY customer_lifetime_value DESC
+      LIMIT 10
+
+charts:
+  kpi_orders:
+    description: Total number of orders placed.
+    query: kpi_totals
+    type: kpi
+    value: total_orders
+    label: " Orders"
+
+  kpi_revenue:
+    description: Total revenue across all orders.
+    query: kpi_totals
+    type: kpi
+    value: total_revenue
+    label: "Total Revenue"
+
+  kpi_customers:
+    description: Total number of customers.
+    query: kpi_totals
+    type: kpi
+    value: total_customers
+    label: "Total Customers"
+
+  revenue_trend:
+    description: Monthly revenue over time.
+    query: revenue_by_month
+    type: line
+    x: month
+    y: revenue
+    style:
+      number_format: currency
+
+  # status_breakdown:
+  #   description: Orders grouped by status.
+  #   query: orders_by_status
+  #   type: bar
+  #   x: status
+  #   y: n
+
+  payment_method_breakdown:
+    description: Revenue by payment method.
+    query: revenue_by_payment_method
+    type: pie
+    theta: amount
+    color: payment_method
+
+  top_customers_table:
+    description: Highest lifetime-value customers.
+    query: top_customers
+    type: table
+    style:
+      columns:
+        first_name:
+          label: First Naassme
+        last_name:
+          label: Last Name
+        number_of_orders:
+          label: Orders
+        customer_lifetime_value:
+          format: currency_whole
+          label: Lifetime Value
+
+rows:
+  - cols: [kpi_orders, kpi_revenue, kpi_customers]
+  - revenue_trend
+  - cols: 
+    - status_breakdown
+    - payment_method_breakdown
+  - top_customers_table

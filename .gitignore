@@ -9,3 +9,6 @@ logs/
 venv/
 env/
 .venv/
+renders/
+__pycache__/
+*.duckdb

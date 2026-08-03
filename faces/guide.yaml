@@ -1,0 +1,147 @@
+# Dataface Guide — your first dashboard
+#
+# This file is a self-contained tour of Dataface features.
+# Every section works without a database: data lives inline.
+# When you're ready, swap inline data for real SQL queries.
+#
+# Key concepts:
+#   title:      dashboard title shown at the top
+#   text:       markdown prose block — supports **bold**, *italic*, lists, code
+#   queries:    data sources — inline values, CSV files, or SQL against a warehouse
+#   charts:     visualizations wired to a query
+#   rows/cols:  layout — rows stack vertically, cols split horizontally
+#   variables:  interactive dropdowns and filters
+
+title: "Dataface Guide"
+description: "A tour of Dataface: queries, charts, layout, KPIs, and variables."
+
+# ── Text blocks ───────────────────────────────────────────────────────────────
+# Any `text:` field accepts markdown.
+text: |
+  Welcome to **Dataface** — dashboards as YAML files.
+
+  This file is your starter guide. Edit it, add new `.yaml` files under
+  `faces/`, and run `dft serve` to preview everything in your browser.
+
+# ── Queries ───────────────────────────────────────────────────────────────────
+# `type: values` embeds data directly — no database needed.
+# Swap for `type: csv` (pointing at a file) or a SQL query once you're ready.
+queries:
+  monthly_revenue:
+    type: values
+    columns: [month, revenue, target]
+    values:
+      - [Jan, 82000, 80000]
+      - [Feb, 91000, 85000]
+      - [Mar, 78000, 90000]
+      - [Apr, 105000, 95000]
+      - [May, 112000, 100000]
+      - [Jun, 99000, 105000]
+
+  category_mix:
+    type: values
+    columns: [category, amount]
+    values:
+      - [Software, 48000]
+      - [Services, 31000]
+      - [Hardware, 20000]
+
+  kpi_summary:
+    type: values
+    columns: [total_revenue, revenue_delta, avg_deal]
+    values:
+      - [567000, 0.14, 18900]
+
+# ── Charts ────────────────────────────────────────────────────────────────────
+# `type:` can be bar, line, area, pie, kpi, table, or scatter.
+# `x:` and `y:` name columns from the query.
+charts:
+  revenue_trend:
+    type: line
+    query: monthly_revenue
+    title: Monthly Revenue vs Target
+    x: month
+    y: revenue
+
+  revenue_bars:
+    type: bar
+    query: monthly_revenue
+    title: Revenue by Month
+    x: month
+    y: revenue
+
+  category_pie:
+    type: pie
+    query: category_mix
+    title: Revenue Mix
+    theta: amount
+    color: category
+
+  kpi_total:
+    type: kpi
+    query: kpi_summary
+    label: Total Revenue (H1)
+    value: total_revenue
+    style:
+      value:
+        format: currency_compact
+    support:
+      value: revenue_delta
+      label: vs H1 last year
+      format: percent_delta
+      glyph: "▲"
+      tone: positive
+
+  kpi_avg_deal:
+    type: kpi
+    query: kpi_summary
+    label: Avg Deal Size
+    value: avg_deal
+    style:
+      value:
+        format: currency_compact
+
+  data_table:
+    type: table
+    query: monthly_revenue
+    title: Monthly Detail
+
+# ── Variables ─────────────────────────────────────────────────────────────────
+# Variables add interactive dropdowns. Wire them to SQL queries with {{ varname }}.
+# With `type: values` data above they show the UI but don't filter — swap to SQL
+# queries and use `WHERE {{ filter('category', segment) }}` to make them live.
+variables:
+  segment:
+    label: Segment
+    input: select
+    options:
+      static: [Software, Services, Hardware]
+
+# ── Layout ────────────────────────────────────────────────────────────────────
+# `rows:` stacks content vertically.
+# `cols:` inside a row splits horizontally.
+# Reference a chart by its key, or use a dict for text/title blocks.
+rows:
+  # KPI row — four equal-width columns
+  - cols:
+      - kpi_total
+      - kpi_avg_deal
+
+  # Charts side by side
+  - cols:
+      - revenue_trend
+      - category_pie
+
+  # Full-width bar chart
+  - revenue_bars
+
+  # Annotated table with intro text
+  - cols:
+      - title: "Monthly Detail"
+        text: |
+          Scroll the table to see all rows.
+          Add `style.pagination.enabled: true` to paginate large datasets.
+        style:
+          padding: "16px"
+
+      - data_table
